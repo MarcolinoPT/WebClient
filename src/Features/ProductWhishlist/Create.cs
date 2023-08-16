@@ -5,8 +5,8 @@ using WebClient.Data;
 namespace WebClient.Features.ProductWhishlist
 {
     [ApiController]
-    // TODO Strict action parameter
-    [Route("api/customers/{id}/wishListProducts")]
+    [Route("api/customers/{id:guid}/wishListProducts")]
+    [Produces("application/json")]
     public class Create : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -16,34 +16,37 @@ namespace WebClient.Features.ProductWhishlist
             _mediator = mediator;
         }
 
-        public record ProductWhishlistRequest
+        public record AddProductToWhishlistRequest
         {
             public required string Name { get; init; }
         }
 
         [HttpPost]
-        public async Task<IActionResult> HandleAsync([FromBody] ProductWhishlistRequest request,
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AddProductToWishlistResponse))]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> HandleAsync([FromBody] AddProductToWhishlistRequest request,
                                                      CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(request: new CreateProductWhishlistCommand
-            {
-                Name = request.Name,
-            }, cancellationToken);
+            var result = await _mediator.Send(
+                request: new AddProductToWhishlistCommand
+                {
+                    Name = request.Name,
+                }, cancellationToken);
             return Ok(result);
         }
 
-        internal record CreateProductWhishlistCommand : IRequest<CreateProductWishlistResponse>
+        internal record AddProductToWhishlistCommand : IRequest<AddProductToWishlistResponse>
         {
             public required string Name { get; init; }
         }
 
-        internal record CreateProductWishlistResponse
+        internal record AddProductToWishlistResponse
         {
             public required Guid Id { get; init; }
             public required string Name { get; init; }
         }
 
-        internal class CreateProductWhishlistHandler : IRequestHandler<CreateProductWhishlistCommand, CreateProductWishlistResponse>
+        internal class CreateProductWhishlistHandler : IRequestHandler<AddProductToWhishlistCommand, AddProductToWishlistResponse>
         {
             private readonly ProductsRepository _repository;
 
@@ -52,18 +55,19 @@ namespace WebClient.Features.ProductWhishlist
                 _repository = repository;
             }
 
-            public async Task<CreateProductWishlistResponse> Handle(CreateProductWhishlistCommand request,
-                                                                    CancellationToken cancellationToken)
+            public async Task<AddProductToWishlistResponse> Handle(AddProductToWhishlistCommand request,
+                                                                   CancellationToken cancellationToken)
             {
                 var product = new DTOs.ProductDto
                 {
+                    // We assign the product id randomly for the purpose of the challenge
                     Id = Guid.NewGuid(),
                     Name = request.Name,
                 };
                 await _repository.AddProductToWhislist(
                     product: product,
                     cancellationToken: cancellationToken);
-                return new CreateProductWishlistResponse
+                return new AddProductToWishlistResponse
                 {
                     Id = product.Id,
                     Name = product.Name,
