@@ -1,13 +1,14 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using WebClient.Data;
+using WebClient.DTOs;
 
 namespace WebClient.Features.ProductWhishlist
 {
     [ApiController]
     [Route("api/customers/{id:guid}/wishListProducts/{productId:guid}")]
     [Produces("application/json")]
-    public class Delete : ControllerBase
+    public sealed class Delete : ControllerBase
     {
         private readonly IMediator _mediator;
 
@@ -21,28 +22,39 @@ namespace WebClient.Features.ProductWhishlist
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> HandleAsync(CancellationToken cancellationToken = default)
         {
-            await _mediator.Send(request: new DeleteProductWhishlistCommand(),
-                                 cancellationToken);
-            return NoContent();
+            var result = await _mediator.Send(request: new DeleteProductWhishlistCommand(),
+                                              cancellationToken);
+            return Ok(result);
         }
 
-        internal record DeleteProductWhishlistCommand : IRequest
+        internal sealed record DeleteProductWhishlistCommand : IRequest<CustomerDetailsResponse>
         {
         }
 
-        internal class DeleteProductWhislistHandler : IRequestHandler<DeleteProductWhishlistCommand>
+        internal sealed class DeleteProductWhislistHandler : IRequestHandler<DeleteProductWhishlistCommand, CustomerDetailsResponse>
         {
-            private readonly ProductsRepository _repository;
+            private readonly ProductsRepository _productsRepository;
+            private readonly CustomersRepository _customersRepository;
 
-            public DeleteProductWhislistHandler(ProductsRepository repository)
+            public DeleteProductWhislistHandler(ProductsRepository productsRepository,
+                                                CustomersRepository customersRepository)
             {
-                _repository = repository;
+                _productsRepository = productsRepository;
+                _customersRepository = customersRepository;
             }
 
-            public async Task Handle(DeleteProductWhishlistCommand _,
-                                     CancellationToken cancellationToken)
+            public async Task<CustomerDetailsResponse> Handle(DeleteProductWhishlistCommand _,
+                                                              CancellationToken cancellationToken)
             {
-                await _repository.DeleteProductFromWhislist(cancellationToken);
+                await _productsRepository.DeleteProductFromWhislist(cancellationToken);
+                var customerDetails = await _customersRepository.FetchCustomerDetailsAsync(cancellationToken);
+                return new CustomerDetailsResponse
+                {
+                    Id = customerDetails.Id,
+                    Name = customerDetails.Name,
+                    Description = customerDetails.Description,
+                    ProductsWishlisted = customerDetails.WishlistProducts.ToProductResponseArray()
+                };
             }
         }
     }
