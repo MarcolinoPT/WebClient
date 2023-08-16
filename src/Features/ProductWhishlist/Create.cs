@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
 using WebClient.Data;
 
 namespace WebClient.Features.ProductWhishlist
@@ -25,19 +24,25 @@ namespace WebClient.Features.ProductWhishlist
         public async Task<IActionResult> HandleAsync([FromBody] ProductWhishlistRequest request,
                                                      CancellationToken cancellationToken = default)
         {
-            await _mediator.Send(request: new CreateProductWhishlistCommand
+            var result = await _mediator.Send(request: new CreateProductWhishlistCommand
             {
                 Name = request.Name,
             }, cancellationToken);
-            return StatusCode((int)HttpStatusCode.NoContent);
+            return Ok(result);
         }
 
-        internal record CreateProductWhishlistCommand : IRequest
+        internal record CreateProductWhishlistCommand : IRequest<CreateProductWishlistResponse>
         {
             public required string Name { get; init; }
         }
 
-        internal class CreateProductWhishlistHandler : IRequestHandler<CreateProductWhishlistCommand>
+        internal record CreateProductWishlistResponse
+        {
+            public required Guid Id { get; init; }
+            public required string Name { get; init; }
+        }
+
+        internal class CreateProductWhishlistHandler : IRequestHandler<CreateProductWhishlistCommand, CreateProductWishlistResponse>
         {
             private readonly ProductsRepository _repository;
 
@@ -46,14 +51,22 @@ namespace WebClient.Features.ProductWhishlist
                 _repository = repository;
             }
 
-            public async Task Handle(CreateProductWhishlistCommand request,
-                                     CancellationToken cancellationToken)
+            public async Task<CreateProductWishlistResponse> Handle(CreateProductWhishlistCommand request,
+                                                                    CancellationToken cancellationToken)
             {
-                await _repository.AddProductToWhislist(cancellationToken: cancellationToken,
-                                                       product: new DTOs.ProductDto
-                                                       {
-                                                           Name = request.Name,
-                                                       });
+                var product = new DTOs.ProductDto
+                {
+                    Id = Guid.NewGuid(),
+                    Name = request.Name,
+                };
+                await _repository.AddProductToWhislist(
+                    product: product,
+                    cancellationToken: cancellationToken);
+                return new CreateProductWishlistResponse
+                {
+                    Id = product.Id,
+                    Name = product.Name,
+                };
             }
         }
     }

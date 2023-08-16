@@ -23,7 +23,7 @@ namespace WebClient.Data
 
     // It might be overkill to create a delegating handler for this, but it's a good example of how to do it.
     // It's also a good example of how to use the IHttpContextAccessor to get the customer id from the route.
-    // This approach allow the repository to focus solely on the produc and not on the customer details.
+    // This approach allow the repository to focus solely on the product and not on the customer details.
 
     public class CustomerIdDelegatingHandler : DelegatingHandler
     {
@@ -43,8 +43,10 @@ namespace WebClient.Data
                                          as string);
 #pragma warning restore CS8604 // Possible null reference argument.
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
-            request.RequestUri = new Uri(request.RequestUri.OriginalString.Replace(oldValue: "{id}",
-                                                                                   newValue: customerId.ToString()));
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            request.RequestUri = new Uri(uriString: request.RequestUri.OriginalString.Replace(oldValue: "{id}",
+                                                                                              newValue: customerId.ToString()));
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
             return base.SendAsync(request, cancellationToken);
         }
     }
