@@ -1,13 +1,14 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using WebClient.Data;
+using WebClient.DTOs;
 
 namespace WebClient.Features.ProductWhishlist
 {
     [ApiController]
     [Route("api/customers/{id:guid}/wishListProducts")]
     [Produces("application/json")]
-    public class Create : ControllerBase
+    public sealed class Create : ControllerBase
     {
         private readonly IMediator _mediator;
 
@@ -16,13 +17,13 @@ namespace WebClient.Features.ProductWhishlist
             _mediator = mediator;
         }
 
-        public record AddProductToWhishlistRequest
+        public sealed record AddProductToWhishlistRequest
         {
             public required string Name { get; init; }
         }
 
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AddProductToWishlistResponse))]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CustomerDetailsResponse))]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> HandleAsync([FromBody] AddProductToWhishlistRequest request,
                                                      CancellationToken cancellationToken = default)
@@ -35,28 +36,25 @@ namespace WebClient.Features.ProductWhishlist
             return Ok(result);
         }
 
-        internal record AddProductToWhishlistCommand : IRequest<AddProductToWishlistResponse>
+        internal sealed record AddProductToWhishlistCommand : IRequest<CustomerDetailsResponse>
         {
             public required string Name { get; init; }
         }
 
-        internal record AddProductToWishlistResponse
+        internal sealed class CreateProductWhishlistHandler : IRequestHandler<AddProductToWhishlistCommand, CustomerDetailsResponse>
         {
-            public required Guid Id { get; init; }
-            public required string Name { get; init; }
-        }
+            private readonly ProductsRepository _productrsRepository;
+            private readonly CustomersRepository _customersRepository;
 
-        internal class CreateProductWhishlistHandler : IRequestHandler<AddProductToWhishlistCommand, AddProductToWishlistResponse>
-        {
-            private readonly ProductsRepository _repository;
-
-            public CreateProductWhishlistHandler(ProductsRepository repository)
+            public CreateProductWhishlistHandler(ProductsRepository productsRepository,
+                                                 CustomersRepository customersRepository)
             {
-                _repository = repository;
+                _productrsRepository = productsRepository;
+                _customersRepository = customersRepository;
             }
 
-            public async Task<AddProductToWishlistResponse> Handle(AddProductToWhishlistCommand request,
-                                                                   CancellationToken cancellationToken)
+            public async Task<CustomerDetailsResponse> Handle(AddProductToWhishlistCommand request,
+                                                              CancellationToken cancellationToken)
             {
                 var product = new DTOs.ProductDto
                 {
@@ -64,13 +62,16 @@ namespace WebClient.Features.ProductWhishlist
                     Id = Guid.NewGuid(),
                     Name = request.Name,
                 };
-                await _repository.AddProductToWhislist(
+                await _productrsRepository.AddProductToWhislist(
                     product: product,
                     cancellationToken: cancellationToken);
-                return new AddProductToWishlistResponse
+                var customerDetails = await _customersRepository.FetchCustomerDetailsAsync(cancellationToken);
+                return new CustomerDetailsResponse
                 {
-                    Id = product.Id,
-                    Name = product.Name,
+                    Id = customerDetails.Id,
+                    Name = customerDetails.Name,
+                    Description = customerDetails.Description,
+                    ProductsWishlisted = customerDetails.WishlistProducts.ToProductResponseArray()
                 };
             }
         }

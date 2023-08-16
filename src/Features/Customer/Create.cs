@@ -9,7 +9,7 @@ namespace WebClient.Features.Customer
     [ApiController]
     [Route("api/customers")]
     [Produces("application/json")]
-    public sealed class Create : ControllerBase
+    public sealed partial class Create : ControllerBase
     {
         private readonly IMediator _mediator;
 
@@ -25,7 +25,7 @@ namespace WebClient.Features.Customer
         }
 
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(NewCustomerResponse))]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CustomerDetailsResponse))]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> HandleAsync([FromBody] CreateCustomerRequest request,
                                                      CancellationToken cancellationToken = default)
@@ -41,27 +41,13 @@ namespace WebClient.Features.Customer
                               value: result);
         }
 
-        internal record CreateCustomerCommand : IRequest<NewCustomerResponse>
+        internal record CreateCustomerCommand : IRequest<CustomerDetailsResponse>
         {
             public required string Name { get; init; }
             public required string Description { get; init; }
         }
 
-        public record NewCustomerResponse
-        {
-            public required Guid Id { get; init; }
-            public required string Name { get; init; }
-            public required string Description { get; init; }
-            public required ProductResponse[] ProductsWishlisted { get; init; }
-        }
-
-        public sealed record ProductResponse
-        {
-            public required Guid Id { get; init; }
-            public required string Name { get; init; }
-        }
-
-        internal class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, NewCustomerResponse>
+        internal class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, CustomerDetailsResponse>
         {
             private readonly IHttpContextAccessor _httpContextAccessor;
             private readonly CustomersRepository _repository;
@@ -73,7 +59,7 @@ namespace WebClient.Features.Customer
                 _repository = repository;
             }
 
-            public async Task<NewCustomerResponse> Handle(CreateCustomerCommand request,
+            public async Task<CustomerDetailsResponse> Handle(CreateCustomerCommand request,
                                                           CancellationToken cancellationToken)
             {
                 var newCustomer = await _repository.CreateAsync(cancellationToken: cancellationToken,
@@ -89,17 +75,12 @@ namespace WebClient.Features.Customer
                                                                          value: newCustomer.Id.ToString());
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
                 var customerDetails = await _repository.FetchCustomerDetailsAsync(cancellationToken);
-                return new NewCustomerResponse
+                return new CustomerDetailsResponse
                 {
                     Id = newCustomer.Id,
                     Description = customerDetails.Description,
                     Name = customerDetails.Name,
-                    ProductsWishlisted = customerDetails.WishlistProducts.Select(
-                        x => new ProductResponse
-                        {
-                            Id = x.Id,
-                            Name = x.Name,
-                        }).ToArray(),
+                    ProductsWishlisted = customerDetails.WishlistProducts.ToProductResponseArray()
                 };
             }
         }
