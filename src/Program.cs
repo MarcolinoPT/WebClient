@@ -18,20 +18,21 @@ builder.Services.Configure<AppConfig>(builder.Configuration.GetSection("AppConfi
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
+builder.Services.AddTransient<IdDelegatingHandler>();
+
 builder.Services.AddHttpClient<CustomersRepository>(
     (serviceProvider, client) =>
     {
         var config = serviceProvider.GetRequiredService<IOptions<AppConfig>>().Value;
         client.BaseAddress = new Uri(config.BaseAddress.Url);
-    });
+    }).AddHttpMessageHandler<IdDelegatingHandler>();
 
-builder.Services.AddTransient<CustomerIdDelegatingHandler>();
 builder.Services.AddHttpClient<ProductsRepository>(
     (serviceProvider, client) =>
     {
         var config = serviceProvider.GetRequiredService<IOptions<AppConfig>>().Value;
         client.BaseAddress = new Uri(config.BaseAddress.Url);
-    }).AddHttpMessageHandler<CustomerIdDelegatingHandler>();
+    }).AddHttpMessageHandler<IdDelegatingHandler>();
 
 builder.Services.AddHttpContextAccessor();
 

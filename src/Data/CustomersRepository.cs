@@ -22,5 +22,13 @@ namespace WebClient.Data
             return await result.Content.ReadFromJsonAsync<CreateCustomerResponseDto>(cancellationToken: cancellationToken);
 #pragma warning restore CS8603 // Possible null reference return.
         }
+
+        public async Task<CustomerDetailsDto> FetchCustomerDetailsAsync(CancellationToken cancellationToken)
+        {
+#pragma warning disable CS8603 // Possible null reference return.
+            return await _httpClient.GetFromJsonAsync<CustomerDetailsDto>(requestUri: "/v1/customers/{id}",
+                                                                          cancellationToken: cancellationToken);
+#pragma warning restore CS8603 // Possible null reference return.
+        }
     }
 }
