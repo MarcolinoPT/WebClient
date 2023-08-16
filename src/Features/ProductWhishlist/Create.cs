@@ -5,6 +5,7 @@ using WebClient.Data;
 namespace WebClient.Features.ProductWhishlist
 {
     [ApiController]
+    // TODO Strict action parameter
     [Route("api/customers/{id}/wishListProducts")]
     public class Create : ControllerBase
     {
