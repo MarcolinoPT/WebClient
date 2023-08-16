@@ -16,6 +16,13 @@ builder.Services.AddHttpClient<CustomersRepository>(client =>
     client.BaseAddress = new Uri("https://nakdbaseserviceapi20211025120549.azurewebsites.net/api/customer");
 });
 
+builder.Services.AddTransient<CustomerIdDelegatingHandler>();
+builder.Services.AddHttpClient<ProductsRepository>(client =>
+{
+    client.BaseAddress = new Uri("https://nakdbaseserviceapi20211025120549.azurewebsites.net/api/customer");
+}).AddHttpMessageHandler<CustomerIdDelegatingHandler>();
+builder.Services.AddHttpContextAccessor();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
