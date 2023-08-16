@@ -18,7 +18,9 @@ namespace WebClient.Data
                                                            value: createCustomer,
                                                            cancellationToken: cancellationToken);
             _ = result.EnsureSuccessStatusCode();
+#pragma warning disable CS8603 // Possible null reference return.
             return await result.Content.ReadFromJsonAsync<CreateCustomerResponseDto>(cancellationToken: cancellationToken);
+#pragma warning restore CS8603 // Possible null reference return.
         }
     }
 }

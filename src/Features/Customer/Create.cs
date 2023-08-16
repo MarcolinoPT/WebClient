@@ -7,7 +7,8 @@ namespace WebClient.Features.Customer
 {
     [ApiController]
     [Route("api/customers")]
-    public class Create : ControllerBase
+    [Produces("application/json")]
+    public sealed class Create : ControllerBase
     {
         private readonly IMediator _mediator;
 
@@ -15,6 +16,7 @@ namespace WebClient.Features.Customer
         {
             _mediator = mediator;
         }
+
         public record CreateCustomerRequest
         {
             public required string Name { get; init; }
@@ -22,26 +24,31 @@ namespace WebClient.Features.Customer
         }
 
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(NewCustomerResponse))]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> HandleAsync([FromBody] CreateCustomerRequest request,
                                                      CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(request: new CreateCustomerCommand
-            {
-                Name = request.Name,
-                Description = request.Description,
+            var result = await _mediator.Send(
+                request: new CreateCustomerCommand
+                {
+                    Name = request.Name,
+                    Description = request.Description,
 
-            }, cancellationToken);
-            return StatusCode((int)HttpStatusCode.Created, result);
-        }
-        internal record NewCustomerResponse
-        {
-            public Guid Id { get; init; }
+                }, cancellationToken);
+            return StatusCode(statusCode: (int)HttpStatusCode.Created,
+                              value: result);
         }
 
         internal record CreateCustomerCommand : IRequest<NewCustomerResponse>
         {
             public required string Name { get; init; }
             public required string Description { get; init; }
+        }
+
+        internal record NewCustomerResponse
+        {
+            public Guid Id { get; init; }
         }
 
         internal class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, NewCustomerResponse>
